@@ -17,8 +17,14 @@ export function deriveConnection(params: {
   offlineAfterMs: number;
   previous: Connection;
 }): Connection {
-  const { success, snapshotStatus, everSucceeded, msSinceLastSuccess, offlineAfterMs, previous } =
-    params;
+  const {
+    success,
+    snapshotStatus,
+    everSucceeded,
+    msSinceLastSuccess,
+    offlineAfterMs,
+    previous,
+  } = params;
   if (success) return snapshotStatus === "DEGRADED" ? "DEGRADED" : "ONLINE";
   if (!everSucceeded || msSinceLastSuccess > offlineAfterMs) return "OFFLINE";
   return previous;

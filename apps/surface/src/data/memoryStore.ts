@@ -1,4 +1,4 @@
-import type { SystemMetric } from "@acc/protocol";
+import type { Snapshot, SystemMetric } from "@acc/protocol";
 import type { MachineInput, MachineRecord, Store } from "./types";
 
 /**
@@ -46,19 +46,37 @@ export class MemoryStore implements Store {
     this.persist();
   }
 
-  async recordSystemMetric(machineId: string, metric: SystemMetric): Promise<void> {
+  async recordSystemMetric(
+    machineId: string,
+    metric: SystemMetric,
+  ): Promise<void> {
     const arr = this.metrics.get(machineId) ?? [];
     arr.push(metric);
     if (arr.length > this.MAX) arr.splice(0, arr.length - this.MAX);
     this.metrics.set(machineId, arr);
   }
 
-  async recentSystemMetrics(machineId: string, limit: number): Promise<SystemMetric[]> {
+  async recentSystemMetrics(
+    machineId: string,
+    limit: number,
+  ): Promise<SystemMetric[]> {
     const arr = this.metrics.get(machineId) ?? [];
     return arr.slice(-limit);
   }
 
-  async runRetention(nowMs: number): Promise<{ rolledUp: number; prunedRaw: number }> {
+  /**
+   * The browser dev shell keeps only the system-metric series in memory; the durable
+   * relational history is a Tauri/SQLite concern, so this records the metric and drops
+   * the rest rather than pretending to persist it.
+   */
+  async ingestSnapshot(machineId: string, snapshot: Snapshot): Promise<void> {
+    if (snapshot.system)
+      await this.recordSystemMetric(machineId, snapshot.system);
+  }
+
+  async runRetention(
+    nowMs: number,
+  ): Promise<{ rolledUp: number; prunedRaw: number }> {
     // In-memory: just drop samples older than 24h (no persistent rollups needed).
     const cutoff = nowMs - 24 * 3600_000;
     let pruned = 0;

@@ -1,4 +1,4 @@
-import type { SystemMetric } from "@acc/protocol";
+import type { Snapshot, SystemMetric } from "@acc/protocol";
 
 /** A machine the user has registered on the Surface. */
 export interface MachineRecord {
@@ -31,7 +31,16 @@ export interface Store {
   addMachine(input: MachineInput): Promise<MachineRecord>;
   removeMachine(id: string): Promise<void>;
   recordSystemMetric(machineId: string, metric: SystemMetric): Promise<void>;
-  recentSystemMetrics(machineId: string, limit: number): Promise<SystemMetric[]>;
+  /**
+   * Persist a full normalized snapshot: heartbeat, provider usage/limits, token usage,
+   * cost, sessions (deduped by fingerprint), scheduled tasks and collector health.
+   * Unchanged provider/automation payloads are skipped to avoid duplicate rows (spec §42).
+   */
+  ingestSnapshot(machineId: string, snapshot: Snapshot): Promise<void>;
+  recentSystemMetrics(
+    machineId: string,
+    limit: number,
+  ): Promise<SystemMetric[]>;
   /**
    * Apply the retention/downsampling policy: roll raw samples older than 24h into
    * 1-minute rollups, then prune. Returns counts for logging. Safe to call repeatedly.

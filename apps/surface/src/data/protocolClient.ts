@@ -12,19 +12,29 @@ import {
 import type { MachineRecord } from "./types";
 
 export function baseUrl(address: string): string {
-  return /^https?:\/\//i.test(address) ? address.replace(/\/+$/, "") : `http://${address}`;
+  return /^https?:\/\//i.test(address)
+    ? address.replace(/\/+$/, "")
+    : `http://${address}`;
 }
 
 function authHeaders(token: string | null): Record<string, string> {
   return token ? { authorization: `Bearer ${token}` } : {};
 }
 
-async function getJson(url: string, token: string | null, timeoutMs: number): Promise<unknown> {
+async function getJson(
+  url: string,
+  token: string | null,
+  timeoutMs: number,
+): Promise<unknown> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const res = await fetch(url, { headers: authHeaders(token), signal: controller.signal });
-    if (res.status === 401) throw new Error("unauthorized (check pairing token)");
+    const res = await fetch(url, {
+      headers: authHeaders(token),
+      signal: controller.signal,
+    });
+    if (res.status === 401)
+      throw new Error("unauthorized (check pairing token)");
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return await res.json();
   } finally {
@@ -33,8 +43,15 @@ async function getJson(url: string, token: string | null, timeoutMs: number): Pr
 }
 
 /** Cheap liveness + identity check. Validated against the protocol schema. */
-export async function fetchHealth(machine: MachineRecord, timeoutMs = 4000): Promise<HealthResponse> {
-  const data = await getJson(`${baseUrl(machine.address)}/health`, machine.token, timeoutMs);
+export async function fetchHealth(
+  machine: MachineRecord,
+  timeoutMs = 4000,
+): Promise<HealthResponse> {
+  const data = await getJson(
+    `${baseUrl(machine.address)}/health`,
+    machine.token,
+    timeoutMs,
+  );
   return HealthResponseSchema.parse(data);
 }
 
@@ -42,8 +59,15 @@ export async function fetchHealth(machine: MachineRecord, timeoutMs = 4000): Pro
  * Fetch and VALIDATE the normalized snapshot. Validation at this boundary means a
  * malformed agent payload is rejected here rather than corrupting the local database.
  */
-export async function fetchSnapshot(machine: MachineRecord, timeoutMs = 8000): Promise<Snapshot> {
-  const data = await getJson(`${baseUrl(machine.address)}/v1/snapshot`, machine.token, timeoutMs);
+export async function fetchSnapshot(
+  machine: MachineRecord,
+  timeoutMs = 8000,
+): Promise<Snapshot> {
+  const data = await getJson(
+    `${baseUrl(machine.address)}/v1/snapshot`,
+    machine.token,
+    timeoutMs,
+  );
   return SnapshotSchema.parse(data);
 }
 
@@ -54,7 +78,9 @@ export async function fetchUsage(
   timeoutMs = 15000,
 ): Promise<UsageReport> {
   const url = `${baseUrl(machine.address)}/v1/usage?granularity=${granularity}`;
-  const data = (await getJson(url, machine.token, timeoutMs)) as { report: unknown };
+  const data = (await getJson(url, machine.token, timeoutMs)) as {
+    report: unknown;
+  };
   return UsageReportSchema.parse(data.report);
 }
 

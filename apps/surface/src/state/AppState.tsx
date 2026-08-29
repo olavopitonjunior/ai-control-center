@@ -158,8 +158,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setLastError(null);
         setLastUpdated(snap.generatedAt);
         const store = await getStore();
-        if (snap.system) {
+        if (snap.system)
           await store.recordSystemMetric(machine.id, snap.system);
+        // Persist the rest of the normalized snapshot (providers/limits/tokens/cost/
+        // sessions/tasks/collector health) — unchanged payloads are skipped (spec §41/§42).
+        await store.ingestSnapshot(machine.id, snap);
+        if (snap.system) {
           const recent = await store.recentSystemMetrics(machine.id, 120);
           if (!cancelled) setHistory(recent);
         }

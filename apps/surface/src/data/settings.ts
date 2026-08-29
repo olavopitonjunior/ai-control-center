@@ -17,7 +17,9 @@ const DEFAULTS: Settings = { claude5hCeilingTokens: null };
 export function loadSettings(): Settings {
   try {
     const raw = localStorage.getItem(KEY);
-    return raw ? { ...DEFAULTS, ...(JSON.parse(raw) as Partial<Settings>) } : DEFAULTS;
+    return raw
+      ? { ...DEFAULTS, ...(JSON.parse(raw) as Partial<Settings>) }
+      : DEFAULTS;
   } catch {
     return DEFAULTS;
   }
@@ -34,6 +36,9 @@ export function useSettings(): [Settings, (patch: Partial<Settings>) => void] {
     }
   }, [settings]);
 
-  const update = useCallback((patch: Partial<Settings>) => setSettings((s) => ({ ...s, ...patch })), []);
+  const update = useCallback(
+    (patch: Partial<Settings>) => setSettings((s) => ({ ...s, ...patch })),
+    [],
+  );
   return [settings, update];
 }

@@ -14,18 +14,54 @@ describe("deriveConnection", () => {
   const base = { offlineAfterMs: 15000, previous: "PAIRING" as const };
 
   it("is ONLINE on success, DEGRADED when the agent says so", () => {
-    expect(deriveConnection({ ...base, success: true, everSucceeded: true, msSinceLastSuccess: 0, snapshotStatus: "ONLINE" })).toBe("ONLINE");
-    expect(deriveConnection({ ...base, success: true, everSucceeded: true, msSinceLastSuccess: 0, snapshotStatus: "DEGRADED" })).toBe("DEGRADED");
+    expect(
+      deriveConnection({
+        ...base,
+        success: true,
+        everSucceeded: true,
+        msSinceLastSuccess: 0,
+        snapshotStatus: "ONLINE",
+      }),
+    ).toBe("ONLINE");
+    expect(
+      deriveConnection({
+        ...base,
+        success: true,
+        everSucceeded: true,
+        msSinceLastSuccess: 0,
+        snapshotStatus: "DEGRADED",
+      }),
+    ).toBe("DEGRADED");
   });
 
   it("goes OFFLINE if never succeeded or past the timeout", () => {
-    expect(deriveConnection({ ...base, success: false, everSucceeded: false, msSinceLastSuccess: Infinity })).toBe("OFFLINE");
-    expect(deriveConnection({ ...base, success: false, everSucceeded: true, msSinceLastSuccess: 20000 })).toBe("OFFLINE");
+    expect(
+      deriveConnection({
+        ...base,
+        success: false,
+        everSucceeded: false,
+        msSinceLastSuccess: Infinity,
+      }),
+    ).toBe("OFFLINE");
+    expect(
+      deriveConnection({
+        ...base,
+        success: false,
+        everSucceeded: true,
+        msSinceLastSuccess: 20000,
+      }),
+    ).toBe("OFFLINE");
   });
 
   it("keeps the previous state during a brief blip", () => {
     expect(
-      deriveConnection({ success: false, everSucceeded: true, msSinceLastSuccess: 5000, offlineAfterMs: 15000, previous: "ONLINE" }),
+      deriveConnection({
+        success: false,
+        everSucceeded: true,
+        msSinceLastSuccess: 5000,
+        offlineAfterMs: 15000,
+        previous: "ONLINE",
+      }),
     ).toBe("ONLINE");
   });
 });

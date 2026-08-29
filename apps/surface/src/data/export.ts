@@ -13,12 +13,24 @@ function download(filename: string, mime: string, content: string): void {
 }
 
 export function exportUsageJson(report: UsageReport): void {
-  download(`ai-usage-${report.granularity}.json`, "application/json", JSON.stringify(report, null, 2));
+  download(
+    `ai-usage-${report.granularity}.json`,
+    "application/json",
+    JSON.stringify(report, null, 2),
+  );
 }
 
 /** Export the usage time-series as CSV (never includes secrets). */
 export function exportUsageCsv(report: UsageReport): void {
-  const header = ["period", "inputTokens", "outputTokens", "cacheReadTokens", "cacheCreationTokens", "totalTokens", "cost"];
+  const header = [
+    "period",
+    "inputTokens",
+    "outputTokens",
+    "cacheReadTokens",
+    "cacheCreationTokens",
+    "totalTokens",
+    "cost",
+  ];
   const rows = report.points.map((p) =>
     [
       p.period,
@@ -30,5 +42,9 @@ export function exportUsageCsv(report: UsageReport): void {
       p.cost ?? "",
     ].join(","),
   );
-  download(`ai-usage-${report.granularity}.csv`, "text/csv", [header.join(","), ...rows].join("\n"));
+  download(
+    `ai-usage-${report.granularity}.csv`,
+    "text/csv",
+    [header.join(","), ...rows].join("\n"),
+  );
 }
