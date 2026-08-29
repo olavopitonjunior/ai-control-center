@@ -14,6 +14,20 @@ import type { AutomationStatus, ScheduledTask } from "@acc/protocol";
  * Apple's own `com.apple.*` agents are excluded to focus on user automations (mirrors the
  * `\Microsoft\` exclusion on Windows).
  */
+/**
+ * Entries that are not automations at all. Verified against real `launchctl list` output
+ * on macOS: every open GUI app gets an `application.<bundle-id>.<pid>.<pid>` registration
+ * (e.g. `application.com.microsoft.VSCode.707372.708019`). Those are running apps, not
+ * scheduled jobs, and would otherwise flood the Automations screen. Note this ALSO covers
+ * `application.com.apple.Terminal...`, which the `com.apple.` prefix check misses because
+ * the label starts with `application.`.
+ */
+function isNonAutomationLabel(label: string): boolean {
+  if (label.startsWith("application.")) return true;
+  if (/^0x[0-9a-f]+\./i.test(label)) return true; // anonymous/transient entries
+  return false;
+}
+
 export function parseLaunchctlList(
   text: string,
   machineId: string,
@@ -31,6 +45,7 @@ export function parseLaunchctlList(
     const [pidStr, statusStr, ...labelParts] = cols;
     const label = labelParts.join(" ");
     if (pidStr === "PID" || statusStr === "Status") continue; // header
+    if (isNonAutomationLabel(label)) continue;
     if (excludeApple && label.startsWith("com.apple.")) continue;
 
     const running = pidStr !== "-" && pidStr !== "";

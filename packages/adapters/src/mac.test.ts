@@ -71,4 +71,30 @@ describe("parseLaunchctlList", () => {
     const all = parseLaunchctlList(OUT, "mac", { excludeApple: false });
     expect(all.some((t) => t.name === "com.apple.systemagent")).toBe(true);
   });
+
+  // Labels captured verbatim from `launchctl list` on a real MacBook (2026-08-29).
+  // Every open GUI app registers an `application.*` entry; these are running apps, not
+  // automations, and `application.com.apple.*` also evades the com.apple. prefix filter.
+  const REAL_MAC = `28015\t0\tcom.aicontrolcenter.agent
+-\t0\tapplication.com.microsoft.VSCode.707372.708019
+-\t0\tapplication.com.apple.Terminal.1152921500311914150.1152921500311914155
+501\t0\thomebrew.mxcl.postgresql
+-\t0\tcom.apple.SafariHistoryServiceAgent
+0x7f8a.anonymous.launchd\t0\t0x7f8a.anonymous.launchd`;
+
+  it("excludes running GUI apps and anonymous entries, keeps real agents", () => {
+    const tasks = parseLaunchctlList(REAL_MAC, "mac");
+    const names = tasks.map((t) => t.name).sort();
+    expect(names).toEqual([
+      "com.aicontrolcenter.agent",
+      "homebrew.mxcl.postgresql",
+    ]);
+    // Specifically: no VS Code / Terminal noise on the Automations screen.
+    expect(names.some((n) => n.startsWith("application."))).toBe(false);
+  });
+
+  it("still filters application.com.apple.* even though it lacks the com.apple. prefix", () => {
+    const tasks = parseLaunchctlList(REAL_MAC, "mac", { excludeApple: false });
+    expect(tasks.some((t) => t.name.includes("Terminal"))).toBe(false);
+  });
 });
