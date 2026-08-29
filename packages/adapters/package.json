@@ -1,0 +1,20 @@
+{
+  "name": "@acc/adapters",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Collector interface + normalizers that adapt ccusage, Glances, and OS schedulers into the @acc/protocol model.",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@acc/protocol": "workspace:*"
+  }
+}

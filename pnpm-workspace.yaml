@@ -1,0 +1,7 @@
+packages:
+  - "packages/*"
+  - "apps/*"
+
+# esbuild ships a platform binary via a postinstall script; vite/vitest need it.
+allowBuilds:
+  esbuild: true

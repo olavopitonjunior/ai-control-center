@@ -1,0 +1,27 @@
+[package]
+name = "ai-control-center"
+version = "0.0.0"
+description = "AI Control Center — Surface Pro control plane"
+authors = ["AI Control Center"]
+edition = "2021"
+rust-version = "1.77"
+
+[lib]
+name = "ai_control_center_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-sql = { version = "2", features = ["sqlite"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[profile.release]
+panic = "abort"
+codegen-units = 1
+lto = true
+opt-level = "s"
+strip = true
