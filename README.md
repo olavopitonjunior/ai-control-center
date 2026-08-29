@@ -1,5 +1,7 @@
 # AI Control Center
 
+[![CI](https://github.com/olavopitonjunior/ai-control-center/actions/workflows/ci.yml/badge.svg)](https://github.com/olavopitonjunior/ai-control-center/actions/workflows/ci.yml)
+
 A **local-first, touch-first AI observability appliance**. A Microsoft Surface Pro acts as
 a dedicated **control plane** that continuously displays and analyzes AI usage across your
 machines — provider quotas and limits, tokens and cost, active/historical AI coding
