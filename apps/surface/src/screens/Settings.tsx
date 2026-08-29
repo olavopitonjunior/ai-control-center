@@ -2,12 +2,14 @@ import { useState } from "react";
 import type { DiscoveredAgent } from "@acc/protocol";
 import { useApp } from "../state/AppState";
 import { useSettings } from "../data/settings";
+import { useSurfaceMode } from "../data/surfaceMode";
 import { fetchDiscover } from "../data/protocolClient";
 import { Card } from "../components/ui";
 
 export function Settings() {
   const { machines, selected, addMachine, removeMachine } = useApp();
   const [settings, updateSettings] = useSettings();
+  const [surfaceMode, updateSurfaceMode] = useSurfaceMode();
   const [discovered, setDiscovered] = useState<DiscoveredAgent[] | null>(null);
   const [discovering, setDiscovering] = useState(false);
   const [discoverErr, setDiscoverErr] = useState<string | null>(null);
@@ -167,6 +169,41 @@ export function Settings() {
             ))}
           </ul>
         )}
+      </Card>
+
+      <Card title="Surface Mode">
+        <p className="muted">
+          A dedicated control-center presentation: fullscreen with reduced
+          chrome. Nothing here is on by default — the Surface is never forced to
+          stay awake.
+        </p>
+        <label className="toggle">
+          <input
+            type="checkbox"
+            checked={surfaceMode.enabled}
+            onChange={(e) => updateSurfaceMode({ enabled: e.target.checked })}
+          />
+          <span>Fullscreen Surface Mode</span>
+        </label>
+        <label className="toggle">
+          <input
+            type="checkbox"
+            checked={surfaceMode.preventSleep}
+            disabled={!surfaceMode.enabled}
+            onChange={(e) =>
+              updateSurfaceMode({ preventSleep: e.target.checked })
+            }
+          />
+          <span>Keep display awake (use while plugged in)</span>
+        </label>
+        <label className="toggle">
+          <input
+            type="checkbox"
+            checked={surfaceMode.autostart}
+            onChange={(e) => updateSurfaceMode({ autostart: e.target.checked })}
+          />
+          <span>Launch at login</span>
+        </label>
       </Card>
 
       <Card title="Quota ceilings (optional)">

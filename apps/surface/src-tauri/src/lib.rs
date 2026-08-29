@@ -35,6 +35,12 @@ fn migrations() -> Vec<Migration> {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        // Opt-in "launch at login" for Surface Mode (spec §33). Registering the plugin
+        // does NOT enable autostart; the user toggles it in Settings.
+        .plugin(tauri_plugin_autostart::init(
+            tauri_plugin_autostart::MacosLauncher::LaunchAgent,
+            None,
+        ))
         .plugin(
             tauri_plugin_sql::Builder::default()
                 .add_migrations("sqlite:ai-control-center.db", migrations())
