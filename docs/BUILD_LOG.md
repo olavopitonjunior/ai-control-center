@@ -4,6 +4,65 @@ A running journal across sessions. Newest first.
 
 ---
 
+## 2026-08-29 — Spec gap closure (post-M5 conformance pass)
+
+Re-read the 64-section master spec against the delivered code and closed the
+remaining gaps. No rewrite: everything is additive on top of v0.1.1.
+
+**What changed**
+
+- **§55 dedup** — `sessionFingerprint` + `dedupeSessions` with source precedence
+  (ccusage > codexbar > analytics). Values are _chosen_, never summed, so two
+  collectors observing one session cannot double a user's tokens. Applied in the agent
+  snapshot and enforced in storage by a unique index (migration 0004).
+- **§24 history** — agent ring buffer + `GET /v1/history?limit=N` (and `/v1/containers`).
+- **§19/§1 containers & processes** — Glances `processcount` + `containers` plugins →
+  `SystemMetric.processCount` and `Snapshot.containers` (migration 0003); System screen
+  shows both, or "Not available" when no engine is present.
+- **§41 persistence** — `ingestSnapshot` now writes the seven tables that existed but
+  were never used (heartbeats, provider usage/limits, token usage, cost, sessions,
+  collector health) plus scheduled tasks.
+- **§42 retention** — change-detection skips unchanged payloads; the hash excludes
+  volatile fields (`updatedAt`, live process counts) that previously made every poll look
+  "changed". Retention now cascades 1m→5m→1h instead of only pruning.
+- **§21/§22 analytics** — `sessionStats`, `byProject`, `peakUsageHours`, and
+  `weightedConsumptionRate` (exponentially weighted, ignores quota resets) feeding
+  `forecastExhaustionWeighted`. Algorithm documented in source; result stays ESTIMATED.
+- **§33 Surface Mode** — opt-in fullscreen + reduced chrome, plus independent
+  keep-awake (Screen Wake Lock) and launch-at-login (tauri-plugin-autostart) switches.
+  All default OFF.
+- **§17 Sessions** — filter by agent / project / model / date with Active/Idle/History.
+- **§57 power** — Performance / Balanced / Low Power / Auto; changes cadence only.
+- **§58 backup** — `exportBackup` dumps every history table to JSON; the `machines`
+  table is selected column-by-column so pairing tokens can never be exported.
+- **§61 acceptance** — `scripts/acceptance.ts` drives the real Surface client against a
+  real agent process.
+
+**Verified**
+
+- MVP acceptance: **11/11 checks pass**, including the previously unverified items 14
+  (kill → requests fail → blip keeps state → OFFLINE after timeout) and 15 (restart →
+  ONLINE), plus 13, 16–18, 19 (no secrets in logs) and 20 (no fake metrics).
+- Persistence: all nine tables populate with real data in the running app (10 real
+  Windows tasks, Claude 5-hour limit, deduped sessions); across 12 consecutive polls
+  `provider_limits` stayed at 10 and `collector_health` at 24 while `system_metrics` and
+  `machine_heartbeats` grew — duplicates suppressed, time series retained.
+- Live agent: 242 real processes, containers `[]` (no Docker here), history buffer
+  populated, all collectors HEALTHY.
+- **97 unit/integration tests pass**; typecheck, prettier, frontend build and the native
+  Rust build (with the autostart plugin) all clean.
+
+**Still open (honest)**
+
+- macOS agent on real Mac hardware; cloud adapters against live accounts.
+- Backup **restore** is not implemented (export only).
+- codexbar OFFICIAL provider quotas remain deferred, so Claude limits are
+  CALCULATED/ESTIMATED and the 5-hour percentage needs a user-supplied ceiling.
+- The raw `cargo build` debug exe still doesn't serve the embedded frontend; use
+  `tauri dev` / `tauri build`.
+
+---
+
 ## 2026-08-28 — Milestone 5: Cloud automation adapters
 
 **What changed**

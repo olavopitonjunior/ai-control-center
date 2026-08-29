@@ -129,7 +129,16 @@ collector merged into automations. Credentials live on the **agent** only
 (`ACC_GITHUB_TOKEN`/`ACC_GITHUB_REPOS`, `ACC_N8N_URL`/`ACC_N8N_KEY`) — never on the Surface,
 never logged. Verified end-to-end via a mock n8n server; real services need your tokens.
 
-**All planned milestones (0–5) are complete.** 78 tests green. Remaining real-world
-confirmations: the macOS agent on Mac hardware, and cloud adapters against live accounts.
-Possible future work: OFFICIAL provider quotas (codexbar), Surface Mode/auto-start polish,
-retention 1m→5m→1h cascade, native Surface mDNS. See docs/BUILD_LOG.md.
+**All planned milestones (0–5) are complete, plus a spec-conformance pass** that closed
+the remaining gaps: session dedup (§55), `/v1/history` (§24), containers + process count
+(§19), full snapshot persistence (§41), retention cascade + duplicate suppression (§42),
+session/project analytics and weighted exhaustion forecast (§21/§22), Surface Mode (§33),
+session filtering (§17), power modes (§57), backup export (§58) and the MVP acceptance
+test (§61, 11/11 passing). **97 tests green.**
+
+Run the acceptance test (starts/stops a real agent):
+`cd apps/agent && npx tsx ../../scripts/acceptance.ts`
+
+Remaining real-world confirmations: macOS agent on Mac hardware; cloud adapters against
+live accounts. Known not-implemented: backup **restore** (export only) and codexbar
+OFFICIAL quotas. See docs/BUILD_LOG.md.
