@@ -23,6 +23,14 @@ sessions, system telemetry, and scheduled automations — for a **Mac (over Wi�
 > hardware/accounts in the dev environment): the **macOS agent** on a Mac, and the **cloud
 > adapters** against live GitHub/n8n/Supabase/Vercel accounts. See `docs/BUILD_LOG.md`.
 
+## Download
+
+Windows installers are published automatically on every version tag:
+**[Releases](https://github.com/olavopitonjunior/ai-control-center/releases/latest)** →
+`AI.Control.Center_<version>_x64_en-US.msi`. The MSI is unsigned, so Windows SmartScreen
+will warn on first run (choose *More info → Run anyway*), or build it yourself with
+`pnpm surface:tauri`. Every push also uploads an MSI as a CI artifact.
+
 ## Architecture
 
 ```
