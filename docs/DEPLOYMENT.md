@@ -143,6 +143,7 @@ Manual checks worth doing once (spec §61):
 | System says *Not available* | Glances isn't running on that machine. Everything else still works by design. |
 | Sessions/Usage empty | ccusage found no local coding-agent logs on that machine. |
 | `.ps1` won't run | Execution policy: `powershell -ExecutionPolicy Bypass -File .\scripts\install-agent.ps1 -GenerateToken`. |
+| `zsh: permission denied: ./scripts/...sh` | The clone predates the executable-bit fix. Run `chmod +x scripts/*.sh`, or invoke via `bash ./scripts/install-agent-macos.sh`. |
 | Native app won't build | Rust / MSVC Build Tools / WebView2 missing — `install-surface.ps1` reports which. |
 
 ## Security reminders
