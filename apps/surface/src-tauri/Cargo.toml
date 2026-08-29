@@ -1,6 +1,6 @@
 [package]
 name = "ai-control-center"
-version = "0.0.0"
+version = "0.1.0"
 description = "AI Control Center — Surface Pro control plane"
 authors = ["AI Control Center"]
 edition = "2021"

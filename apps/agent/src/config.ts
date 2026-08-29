@@ -1,7 +1,7 @@
 import os from "node:os";
 import fs from "node:fs";
 
-export const AGENT_VERSION = "0.0.0";
+export const AGENT_VERSION = "0.1.0";
 
 export interface TlsMaterial {
   cert: Buffer;
