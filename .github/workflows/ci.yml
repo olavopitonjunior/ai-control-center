@@ -66,8 +66,14 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      # windows-latest already provides MSVC C++ build tools and the WebView2 runtime.
-      # --no-bundle compiles + links the native app (release .exe) without building
-      # installers, which validates the native build without the bundler/signing overhead.
-      - name: Build Tauri app
-        run: pnpm --filter @acc/surface exec tauri build --no-bundle
+      # windows-latest already provides MSVC C++ build tools and the WebView2 runtime;
+      # Tauri fetches the WiX toolset automatically for the MSI bundle.
+      - name: Build Tauri app (MSI installer)
+        run: pnpm --filter @acc/surface exec tauri build --bundles msi
+
+      - name: Upload MSI installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-control-center-msi
+          path: apps/surface/src-tauri/target/release/bundle/msi/*.msi
+          if-no-files-found: error
