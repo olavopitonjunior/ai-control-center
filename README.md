@@ -125,5 +125,5 @@ ccusage, Glances, and (later) codexbar are consumed as external tools, not forke
 
 ## License
 
-TBD by the project owner. Upstream tools retain their own licenses (ccusage MIT, CodexBar/
-Win-CodexBar MIT, Glances LGPL‑3.0 — used as a separate process, never vendored).
+**MIT** — see [LICENSE](LICENSE). Upstream tools retain their own licenses (ccusage MIT,
+CodexBar/Win-CodexBar MIT, Glances LGPL‑3.0 — used as a separate process, never vendored).
