@@ -46,4 +46,17 @@ export interface Store {
    * 1-minute rollups, then prune. Returns counts for logging. Safe to call repeatedly.
    */
   runRetention(nowMs: number): Promise<{ rolledUp: number; prunedRaw: number }>;
+  /**
+   * Export the local history as plain JSON for backup (spec §58). Pairing tokens are
+   * NEVER included — a backup must not carry credentials.
+   */
+  exportBackup(): Promise<BackupBundle>;
+}
+
+/** A portable, secret-free dump of the Surface's local history. */
+export interface BackupBundle {
+  format: "ai-control-center-backup";
+  version: 1;
+  exportedAt: string;
+  tables: Record<string, unknown[]>;
 }

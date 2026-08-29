@@ -12,11 +12,11 @@ import type { Snapshot, SystemMetric } from "@acc/protocol";
 import { getStore } from "../data/store";
 import { fetchSnapshot } from "../data/protocolClient";
 import { deriveConnection, type Connection } from "../data/connection";
+import { usePowerMode } from "../data/power";
 import type { MachineInput, MachineRecord } from "../data/types";
 
 export type { Connection };
 
-const POLL_MS = 4000;
 const OFFLINE_AFTER_MS = 15000; // no successful poll within this -> OFFLINE
 
 // Guards against overlapping retention sweeps across component instances/effect re-runs.
@@ -53,6 +53,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
   const [history, setHistory] = useState<SystemMetric[]>([]);
   const lastSuccessRef = useRef<number>(0);
+  // Battery awareness (spec §57): power mode changes cadence only, never semantics.
+  const { profile } = usePowerMode();
 
   const reload = useCallback(async () => {
     try {
@@ -92,12 +94,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
     }
     void sweep();
-    const timer = setInterval(() => void sweep(), 5 * 60_000);
+    const timer = setInterval(() => void sweep(), profile.retentionMs);
     return () => {
       cancelled = true;
       clearInterval(timer);
     };
-  }, []);
+  }, [profile.retentionMs]);
 
   const selected = useMemo(
     () => machines.find((m) => m.id === selectedId) ?? null,
@@ -186,12 +188,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
 
     void poll(selected);
-    const timer = setInterval(() => void poll(selected), POLL_MS);
+    const timer = setInterval(() => void poll(selected), profile.pollMs);
     return () => {
       cancelled = true;
       clearInterval(timer);
     };
-  }, [selected]);
+  }, [selected, profile.pollMs]);
 
   const value: AppState = {
     machines,

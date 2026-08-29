@@ -3,13 +3,58 @@ import type { DiscoveredAgent } from "@acc/protocol";
 import { useApp } from "../state/AppState";
 import { useSettings } from "../data/settings";
 import { useSurfaceMode } from "../data/surfaceMode";
+import { usePowerMode } from "../data/power";
 import { fetchDiscover } from "../data/protocolClient";
+import { getStore } from "../data/store";
 import { Card } from "../components/ui";
 
 export function Settings() {
   const { machines, selected, addMachine, removeMachine } = useApp();
   const [settings, updateSettings] = useSettings();
   const [surfaceMode, updateSurfaceMode] = useSurfaceMode();
+  const {
+    setting: powerSetting,
+    setSetting: setPowerSetting,
+    mode: powerMode,
+    profile: powerProfile,
+    charging,
+    level,
+  } = usePowerMode();
+  const [backingUp, setBackingUp] = useState(false);
+  const [backupMsg, setBackupMsg] = useState<string | null>(null);
+
+  async function doBackup() {
+    setBackingUp(true);
+    setBackupMsg(null);
+    try {
+      const store = await getStore();
+      const bundle = await store.exportBackup();
+      const blob = new Blob([JSON.stringify(bundle, null, 2)], {
+        type: "application/json",
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `ai-control-center-backup-${bundle.exportedAt.slice(0, 10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      const rows = Object.values(bundle.tables).reduce(
+        (n, t) => n + t.length,
+        0,
+      );
+      setBackupMsg(
+        `Exported ${rows} row(s) across ${Object.keys(bundle.tables).length} table(s).`,
+      );
+    } catch (e) {
+      setBackupMsg(
+        `Export failed: ${e instanceof Error ? e.message : String(e)}`,
+      );
+    } finally {
+      setBackingUp(false);
+    }
+  }
   const [discovered, setDiscovered] = useState<DiscoveredAgent[] | null>(null);
   const [discovering, setDiscovering] = useState(false);
   const [discoverErr, setDiscoverErr] = useState<string | null>(null);
@@ -204,6 +249,54 @@ export function Settings() {
           />
           <span>Launch at login</span>
         </label>
+      </Card>
+
+      <Card title="Power &amp; battery">
+        <p className="muted">
+          Changes refresh cadence only — never provider semantics or how values
+          are labelled. Auto uses Low Power when on battery below 30%.
+          {charging !== null && (
+            <>
+              {" "}
+              Currently {charging ? "plugged in" : "on battery"}
+              {level !== null ? ` (${Math.round(level * 100)}%)` : ""}.
+            </>
+          )}
+        </p>
+        <div className="seg">
+          {(["auto", "performance", "balanced", "low-power"] as const).map(
+            (m) => (
+              <button
+                key={m}
+                className={`seg__btn${powerSetting === m ? " seg__btn--active" : ""}`}
+                onClick={() => setPowerSetting(m)}
+              >
+                {m.replace("-", " ")}
+              </button>
+            ),
+          )}
+        </div>
+        <p className="muted">
+          Effective: <b>{powerMode}</b> · poll every{" "}
+          {Math.round(powerProfile.pollMs / 1000)}s
+        </p>
+      </Card>
+
+      <Card title="Backup">
+        <p className="muted">
+          Export the local history (machines, usage, limits, sessions, metrics,
+          automations) as JSON. Pairing tokens are never included.
+        </p>
+        <div className="form__actions">
+          <button
+            className="btn"
+            onClick={() => void doBackup()}
+            disabled={backingUp}
+          >
+            {backingUp ? "Exporting…" : "Export backup (JSON)"}
+          </button>
+        </div>
+        {backupMsg && <p className="muted">{backupMsg}</p>}
       </Card>
 
       <Card title="Quota ceilings (optional)">

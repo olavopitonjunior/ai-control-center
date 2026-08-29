@@ -1,5 +1,5 @@
 import type { Snapshot, SystemMetric } from "@acc/protocol";
-import type { MachineInput, MachineRecord, Store } from "./types";
+import type { BackupBundle, MachineInput, MachineRecord, Store } from "./types";
 
 /**
  * In-memory store for the browser dev shell (no Tauri/SQLite). Machines are seeded from
@@ -72,6 +72,26 @@ export class MemoryStore implements Store {
   async ingestSnapshot(machineId: string, snapshot: Snapshot): Promise<void> {
     if (snapshot.system)
       await this.recordSystemMetric(machineId, snapshot.system);
+  }
+
+  async exportBackup(): Promise<BackupBundle> {
+    return {
+      format: "ai-control-center-backup",
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      tables: {
+        // Tokens are deliberately omitted — a backup must never carry credentials.
+        machines: this.machines.map((m) => ({
+          id: m.id,
+          display_name: m.displayName,
+          address: m.address,
+        })),
+        system_metrics: [...this.metrics.entries()].flatMap(
+          ([machineId, arr]) =>
+            arr.map((m) => ({ machine_id: machineId, ...m })),
+        ),
+      },
+    };
   }
 
   async runRetention(

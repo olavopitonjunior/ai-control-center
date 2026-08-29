@@ -6,7 +6,7 @@ import {
   sessionFingerprint,
   type SystemSample,
 } from "@acc/analytics";
-import type { MachineInput, MachineRecord, Store } from "./types";
+import type { BackupBundle, MachineInput, MachineRecord, Store } from "./types";
 
 /** Cheap stable hash used to skip storing unchanged snapshots (spec §42). */
 function hash(value: unknown): string {
@@ -348,6 +348,37 @@ export class SqliteStore implements Store {
     }
 
     this.lastHashes.set(machineId, next);
+  }
+
+  async exportBackup(): Promise<BackupBundle> {
+    // Every history table EXCEPT credentials. `machines` is selected column-by-column so
+    // the pairing token can never end up in a backup file (spec §58).
+    const tables: Record<string, unknown[]> = {};
+    tables.machines = await this.conn.select(
+      "SELECT id, hostname, display_name, os, os_version, architecture, agent_version, address, connection_type, last_seen, status FROM machines",
+    );
+    for (const t of [
+      "machine_heartbeats",
+      "provider_usage",
+      "provider_limits",
+      "token_usage",
+      "cost_records",
+      "ai_sessions",
+      "system_metrics",
+      "system_metric_rollups",
+      "scheduled_tasks",
+      "automation_runs",
+      "collector_health",
+      "insights",
+    ]) {
+      tables[t] = await this.conn.select(`SELECT * FROM ${t}`);
+    }
+    return {
+      format: "ai-control-center-backup",
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      tables,
+    };
   }
 
   async runRetention(
