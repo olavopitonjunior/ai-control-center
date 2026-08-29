@@ -11,6 +11,7 @@ import { AGENT_VERSION, type AgentConfig } from "./config";
 import {
   buildSnapshot,
   defaultCollectors,
+  getHistory,
   normalizeOs,
   type AgentCollectors,
 } from "./snapshot";
@@ -102,6 +103,19 @@ export function buildServer(
   app.get("/v1/collectors", async () => ({
     collectors: (await snapshot()).collectors,
   }));
+
+  app.get("/v1/containers", async () => ({
+    containers: (await snapshot()).containers,
+  }));
+
+  // Recent buffered system samples (spec §24). Ensure at least one sample exists by
+  // building a snapshot first, so a fresh agent doesn't return an empty history.
+  app.get("/v1/history", async (request) => {
+    await snapshot();
+    const q = (request.query ?? {}) as { limit?: string };
+    const limit = Number(q.limit) || 240;
+    return { system: getHistory(limit) };
+  });
 
   app.get("/v1/discover", async (request) => {
     const q = (request.query ?? {}) as { timeoutMs?: string };

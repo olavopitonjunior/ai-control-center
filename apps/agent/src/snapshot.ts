@@ -13,6 +13,7 @@ import {
   preferredConnectionType,
   type CollectorResult,
 } from "@acc/adapters";
+import { dedupeSessions } from "@acc/analytics";
 import type {
   ScheduledTask,
   SystemMetric,
@@ -26,7 +27,11 @@ import {
   defaultCcusageOptions,
   type CcusageData,
 } from "./collectors/ccusage";
-import { collectGlances, defaultGlancesOptions } from "./collectors/glances";
+import {
+  collectGlances,
+  defaultGlancesOptions,
+  type GlancesData,
+} from "./collectors/glances";
 import { collectAutomations } from "./collectors/automations";
 import { collectCloudAutomations } from "./collectors/cloud";
 import { collectUsage } from "./collectors/usage";
@@ -37,7 +42,7 @@ import { collectUsage } from "./collectors/usage";
  */
 export interface AgentCollectors {
   ccusage: (nowIso: string) => Promise<CollectorResult<CcusageData>>;
-  glances: (nowIso: string) => Promise<CollectorResult<SystemMetric>>;
+  glances: (nowIso: string) => Promise<CollectorResult<GlancesData>>;
   tasks: (nowIso: string) => Promise<CollectorResult<ScheduledTask[]>>;
   cloud: (nowIso: string) => Promise<CollectorResult<ScheduledTask[]>>;
   usage: (
@@ -157,11 +162,39 @@ export async function buildSnapshot(
     generatedAt: nowIso,
     machine,
     providers: ccusage.data?.provider ? [ccusage.data.provider] : [],
-    sessions: ccusage.data?.sessions ?? [],
-    system: glances.data ?? null,
+    // Deduplicate before serving: when more than one collector observes the same local
+    // session (ccusage + codexbar), keep one record by source precedence so a user's
+    // tokens can never double (spec §55).
+    sessions: dedupeSessions(ccusage.data?.sessions ?? []),
+    system: glances.data?.metric ?? null,
+    containers: glances.data?.containers ?? [],
     automations: [...(tasks.data ?? []), ...(cloud.data ?? [])],
     collectors: collectorStatuses,
   };
 
-  return SnapshotSchema.parse(snapshot);
+  const parsed = SnapshotSchema.parse(snapshot);
+  if (parsed.system) recordHistory(parsed.system);
+  return parsed;
+}
+
+/**
+ * Bounded in-memory ring buffer of recent system samples, so a freshly-connected Surface
+ * can render history immediately (before it has collected its own). Memory-only and
+ * bounded — the durable store is the Surface's SQLite (spec §20).
+ */
+const HISTORY_LIMIT = 720;
+const history: SystemMetric[] = [];
+
+function recordHistory(metric: SystemMetric): void {
+  const last = history[history.length - 1];
+  // Skip duplicate unchanged samples (spec §42).
+  if (last && last.timestamp === metric.timestamp) return;
+  history.push(metric);
+  if (history.length > HISTORY_LIMIT)
+    history.splice(0, history.length - HISTORY_LIMIT);
+}
+
+/** Most recent buffered samples, oldest first. */
+export function getHistory(limit = HISTORY_LIMIT): SystemMetric[] {
+  return history.slice(-Math.max(1, Math.min(limit, HISTORY_LIMIT)));
 }

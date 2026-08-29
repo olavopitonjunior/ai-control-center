@@ -14,6 +14,7 @@ import { EmptyState } from "../components/EmptyState";
 export function System() {
   const { snapshot, history } = useApp();
   const sys = snapshot?.system ?? null;
+  const containers = snapshot?.containers ?? [];
   const glances = snapshot?.collectors.find((c) => c.name === "glances");
 
   if (!sys) {
@@ -98,6 +99,40 @@ export function System() {
           value={`${fmtBytes(sys.networkRx)}·s / ${fmtBytes(sys.networkTx)}·s`}
         />
         <Stat label="Uptime" value={fmtDuration(sys.uptime)} />
+      </Card>
+
+      <Card
+        title="Processes & containers"
+        right={<Provenance source="glances" quality="OFFICIAL_LOCAL" />}
+      >
+        <Stat
+          label="Processes"
+          value={
+            sys.processCount === null
+              ? "Not available"
+              : sys.processCount.toLocaleString()
+          }
+        />
+        {containers.length === 0 ? (
+          <p className="muted">
+            No containers reported — Not available (no container engine
+            detected).
+          </p>
+        ) : (
+          <ul className="kv">
+            {containers.slice(0, 8).map((c) => (
+              <li key={c.id ?? c.name}>
+                <span>
+                  {c.name}
+                  {c.status && <span className="src-tag">{c.status}</span>}
+                </span>
+                <span className="mono">
+                  {c.cpuPercent === null ? "—" : `${c.cpuPercent.toFixed(0)}%`}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
       </Card>
 
       <div className="card card--wide">

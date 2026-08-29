@@ -3,7 +3,7 @@ import { CollectorHealth, IsoTimestamp } from "./common";
 import { MachineSchema } from "./machine";
 import { ProviderUsageSchema } from "./usage";
 import { AISessionSchema } from "./session";
-import { SystemMetricSchema } from "./system";
+import { ContainerInfoSchema, SystemMetricSchema } from "./system";
 import { ScheduledTaskSchema } from "./automation";
 
 /** Health/report for one collector, surfaced so the UI can show per-source status. */
@@ -41,6 +41,8 @@ export const SnapshotSchema = z.object({
   providers: z.array(ProviderUsageSchema).default([]),
   sessions: z.array(AISessionSchema).default([]),
   system: SystemMetricSchema.nullable(),
+  /** Containers from the local engine; empty when none / no engine present. */
+  containers: z.array(ContainerInfoSchema).default([]),
   automations: z.array(ScheduledTaskSchema).default([]),
   collectors: z.array(CollectorStatusSchema).default([]),
 });

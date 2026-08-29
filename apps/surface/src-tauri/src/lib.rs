@@ -17,6 +17,12 @@ fn migrations() -> Vec<Migration> {
             sql: include_str!("../migrations/0002_rollup_unique.sql"),
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 3,
+            description: "process count column on system_metrics",
+            sql: include_str!("../migrations/0003_process_count.sql"),
+            kind: MigrationKind::Up,
+        },
     ]
 }
 

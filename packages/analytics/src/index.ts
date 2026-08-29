@@ -193,3 +193,4 @@ export function confidenceFrom(observations: number): Confidence {
 }
 
 export * from "./aggregate";
+export * from "./dedup";

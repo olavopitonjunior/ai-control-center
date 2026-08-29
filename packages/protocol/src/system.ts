@@ -33,5 +33,23 @@ export const SystemMetricSchema = z.object({
   networkTx: z.number().nonnegative().nullable(),
 
   uptime: z.number().int().nonnegative().nullable(),
+
+  /** Total process count (Glances `processcount`). Null when unavailable. */
+  processCount: z.number().int().nonnegative().nullable().default(null),
 });
 export type SystemMetric = z.infer<typeof SystemMetricSchema>;
+
+/**
+ * A container reported by the local container engine via Glances (`containers` plugin).
+ * Every field is nullable: Glances returns `{}` when no engine is present, and field
+ * availability varies by engine/version — we never invent values.
+ */
+export const ContainerInfoSchema = z.object({
+  id: z.string().nullable(),
+  name: z.string(),
+  status: z.string().nullable(),
+  image: z.string().nullable(),
+  cpuPercent: z.number().nullable(),
+  memoryUsage: z.number().nullable(),
+});
+export type ContainerInfo = z.infer<typeof ContainerInfoSchema>;

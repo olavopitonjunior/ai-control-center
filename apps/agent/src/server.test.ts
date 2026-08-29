@@ -104,6 +104,8 @@ describe("agent server (loopback, no token)", () => {
   it("granular endpoints return their slice", async () => {
     const sys = await app.inject({ method: "GET", url: "/v1/system" });
     expect(sys.json()).toEqual({ system: null });
+    const cont = await app.inject({ method: "GET", url: "/v1/containers" });
+    expect(cont.json()).toEqual({ containers: [] });
     const prov = await app.inject({ method: "GET", url: "/v1/providers" });
     expect(prov.json()).toEqual({ providers: [] });
   });

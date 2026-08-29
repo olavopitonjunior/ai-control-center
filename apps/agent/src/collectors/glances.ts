@@ -1,10 +1,11 @@
 import { spawn } from "node:child_process";
 import {
+  normalizeContainers,
   normalizeGlances,
   type CollectorResult,
   type GlancesSnapshot,
 } from "@acc/adapters";
-import type { SystemMetric } from "@acc/protocol";
+import type { ContainerInfo, SystemMetric } from "@acc/protocol";
 
 export interface GlancesOptions {
   /** Base URL of the local Glances REST API. */
@@ -24,7 +25,15 @@ const PLUGINS = [
   "gpu",
   "network",
   "uptime",
+  "processcount",
+  "containers",
 ] as const;
+
+/** System telemetry plus the container list (spec §19). */
+export interface GlancesData {
+  metric: SystemMetric;
+  containers: ContainerInfo[];
+}
 
 async function fetchPlugin(
   base: string,
@@ -55,7 +64,7 @@ async function fetchPlugin(
 export async function collectGlances(
   opts: GlancesOptions,
   nowIso: string,
-): Promise<CollectorResult<SystemMetric>> {
+): Promise<CollectorResult<GlancesData>> {
   try {
     const results = await Promise.allSettled(
       PLUGINS.map((p) => fetchPlugin(opts.baseUrl, p, opts.timeoutMs)),
@@ -83,12 +92,15 @@ export async function collectGlances(
     });
 
     const metric = normalizeGlances(snap, nowIso);
+    const containers = normalizeContainers(snap.containers);
     return {
-      data: metric,
+      data: { metric, containers },
       health: "HEALTHY",
-      detail: metric.gpuName
-        ? `gpu: ${metric.gpuName}`
-        : "no discrete GPU reported",
+      detail:
+        (metric.gpuName
+          ? `gpu: ${metric.gpuName}`
+          : "no discrete GPU reported") +
+        `; ${metric.processCount ?? "?"} procs; ${containers.length} container(s)`,
       lastError: null,
     };
   } catch (error) {

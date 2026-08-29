@@ -1,4 +1,4 @@
-import type { SystemMetric } from "@acc/protocol";
+import type { ContainerInfo, SystemMetric } from "@acc/protocol";
 
 /**
  * Partial shapes of Glances REST API v4 responses that we consume. Captured live
@@ -36,6 +36,31 @@ export interface GlancesNetEntry {
   bytes_sent_rate_per_sec?: number;
 }
 
+/** `processcount` plugin. Captured live 2026-08-29: {total, running, sleeping, thread, pid_max}. */
+export interface GlancesProcessCount {
+  total?: number;
+  running?: number;
+  sleeping?: number;
+  thread?: number;
+}
+
+/**
+ * `containers` plugin entry. Glances returns `{}` when no container engine is present
+ * (observed on this machine, which has no Docker running), and a list of container
+ * objects when one is. Field names vary by engine/Glances version, so every field is
+ * optional and normalized defensively — unknown values become null, never invented.
+ */
+export interface GlancesContainerEntry {
+  id?: string;
+  name?: string;
+  status?: string;
+  image?: string | string[];
+  cpu_percent?: number;
+  cpu?: { total?: number };
+  memory_usage?: number;
+  memory?: { usage?: number };
+}
+
 export interface GlancesSnapshot {
   cpu?: GlancesCpu;
   mem?: GlancesMem;
@@ -43,8 +68,31 @@ export interface GlancesSnapshot {
   sensors?: GlancesSensorEntry[];
   gpu?: GlancesGpuEntry[];
   network?: GlancesNetEntry[];
+  processcount?: GlancesProcessCount;
+  /** Either a list of containers, or `{}` / undefined when no engine is available. */
+  containers?: GlancesContainerEntry[] | Record<string, unknown>;
   /** Glances returns uptime as a human string, e.g. "43 days, 17:16:16". */
   uptime?: string;
+}
+
+/**
+ * Normalize the Glances `containers` payload. Returns [] when the plugin reported `{}`
+ * (no engine) so the UI can honestly say "Not available" rather than showing zeros.
+ */
+export function normalizeContainers(
+  raw: GlancesContainerEntry[] | Record<string, unknown> | undefined,
+): ContainerInfo[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .filter((c) => c && (c.name || c.id))
+    .map((c) => ({
+      id: c.id ?? null,
+      name: c.name ?? c.id ?? "unknown",
+      status: c.status ?? null,
+      image: Array.isArray(c.image) ? (c.image[0] ?? null) : (c.image ?? null),
+      cpuPercent: numberOrNull(c.cpu_percent ?? c.cpu?.total),
+      memoryUsage: numberOrNull(c.memory_usage ?? c.memory?.usage),
+    }));
 }
 
 /** Parse Glances' human uptime string into whole seconds. Null if unparseable. */
@@ -131,6 +179,7 @@ export function normalizeGlances(
     networkRx,
     networkTx,
     uptime: parseUptime(snap.uptime),
+    processCount: numberOrNull(snap.processcount?.total),
   };
 }
 

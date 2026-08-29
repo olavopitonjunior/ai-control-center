@@ -50,12 +50,12 @@ export class SqliteStore implements Store {
       `INSERT INTO system_metrics
         (machine_id, timestamp, cpu_percent, cpu_temperature, ram_used, ram_total, ram_percent,
          gpu_name, gpu_percent, vram_used, vram_total, gpu_temperature, disk_used, disk_total,
-         network_rx, network_tx, uptime)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)`,
+         network_rx, network_tx, uptime, process_count)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)`,
       [
         machineId, m.timestamp, m.cpuPercent, m.cpuTemperature, m.ramUsed, m.ramTotal,
         m.ramPercent, m.gpuName, m.gpuPercent, m.vramUsed, m.vramTotal, m.gpuTemperature,
-        m.diskUsed, m.diskTotal, m.networkRx, m.networkTx, m.uptime,
+        m.diskUsed, m.diskTotal, m.networkRx, m.networkTx, m.uptime, m.processCount,
       ],
     );
   }
@@ -85,6 +85,7 @@ export class SqliteStore implements Store {
         networkRx: r.network_rx as number | null,
         networkTx: r.network_tx as number | null,
         uptime: r.uptime as number | null,
+        processCount: (r.process_count ?? null) as number | null,
       }))
       .reverse(); // return chronological order
   }
