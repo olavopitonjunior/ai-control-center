@@ -1,0 +1,15 @@
+# Normalize line endings: store text as LF in the repo and check out as LF,
+# regardless of the contributor's OS or core.autocrlf setting. Prevents CRLF
+# churn on Windows (silences "LF will be replaced by CRLF" warnings).
+* text=auto eol=lf
+
+# Binary assets — never touch line endings.
+*.png binary
+*.ico binary
+*.icns binary
+*.jpg binary
+*.webp binary
+
+# Generated lockfiles are text but shouldn't be diff-noisy.
+pnpm-lock.yaml -diff
+apps/surface/src-tauri/Cargo.lock -diff
