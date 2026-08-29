@@ -5,10 +5,13 @@ import { useSettings } from "../data/settings";
 import { fetchUsage } from "../data/protocolClient";
 import { Card, fmtCompact } from "../components/ui";
 import {
+  byProject,
   forecastFromCeiling,
   formatCountdown,
+  peakUsageHours,
   percentChange,
   secondsUntil,
+  sessionStats,
   shares,
 } from "@acc/analytics";
 import { EmptyState } from "../components/EmptyState";
@@ -111,6 +114,50 @@ export function Insights() {
       insights.push({
         title: "Cache utilization",
         body: `${Math.round((cache / t.totalTokens) * 100)}% of today's tokens are cache reads/writes — a high ratio means cheaper, faster context reuse.`,
+      });
+    }
+
+    // Session statistics (spec §21) — only shown when sessions actually reported values.
+    const stats = sessionStats(snapshot.sessions);
+    if (stats.count > 0) {
+      const parts: string[] = [`${stats.count} session(s) detected`];
+      if (stats.avgDurationSeconds !== null)
+        parts.push(
+          `average ${formatCountdown(Math.round(stats.avgDurationSeconds))}`,
+        );
+      if (stats.longestDurationSeconds !== null)
+        parts.push(
+          `longest ${formatCountdown(Math.round(stats.longestDurationSeconds))}`,
+        );
+      if (stats.avgTokens !== null)
+        parts.push(`~${fmtCompact(Math.round(stats.avgTokens))} tokens each`);
+      insights.push({
+        title: "Session profile",
+        body:
+          parts.join(" · ") +
+          (stats.timedCount === 0
+            ? ". Durations are Not available — ccusage does not expose session start times."
+            : "."),
+      });
+    }
+
+    // Project share (spec §21).
+    const projects = byProject(snapshot.sessions).filter((p) => p.tokens > 0);
+    if (projects.length > 0 && projects[0]) {
+      const top = projects[0];
+      insights.push({
+        title: "Top project",
+        body: `${top.key} accounted for ${Math.round(top.percent)}% of detected coding-agent tokens (${fmtCompact(top.tokens)}).`,
+      });
+    }
+
+    // Peak usage hours (spec §21), computed in the Surface's local timezone.
+    const peaks = peakUsageHours(snapshot.sessions);
+    if (peaks.length > 0 && peaks[0] && peaks[0].count > 1) {
+      const h = peaks[0].hour;
+      insights.push({
+        title: "Peak activity",
+        body: `Most AI activity is around ${String(h).padStart(2, "0")}:00–${String((h + 1) % 24).padStart(2, "0")}:00 (local time).`,
       });
     }
 
