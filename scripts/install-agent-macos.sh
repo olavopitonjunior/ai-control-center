@@ -33,11 +33,15 @@ echo "  [info] Automations are read from your user crontab + launchd (no root)."
 TOKEN_FILE="$REPO/.agent-pairing-token"   # gitignored (*.local / token files)
 if [[ -f "$TOKEN_FILE" ]]; then
   TOKEN="$(cat "$TOKEN_FILE")"
-  echo "  [ok]   reusing existing pairing token ($TOKEN_FILE)"
+  # Tighten permissions on a pre-existing file: earlier installs, or a file restored from
+  # a backup, may be group/world readable.
+  chmod 600 "$TOKEN_FILE" 2>/dev/null || true
+  echo "  [ok]   reusing existing pairing token ($TOKEN_FILE, mode 600)"
 else
   TOKEN="$(head -c 32 /dev/urandom | base64 | tr '+/' '-_' | tr -d '=')"
   ( umask 077; printf '%s' "$TOKEN" > "$TOKEN_FILE" )
-  echo "  [ok]   generated pairing token -> $TOKEN_FILE (keep private)"
+  chmod 600 "$TOKEN_FILE" 2>/dev/null || true
+  echo "  [ok]   generated pairing token -> $TOKEN_FILE (mode 600, keep private)"
 fi
 
 PNPM_BIN="$(command -v pnpm)"
@@ -69,7 +73,10 @@ cat > "$PLIST" <<PLISTEOF
     <key>PATH</key><string>${NODE_DIR}:/usr/bin:/bin:/usr/sbin:/sbin</string>
     <key>ACC_AGENT_HOST</key><string>0.0.0.0</string>
     <key>ACC_AGENT_PORT</key><string>${PORT}</string>
-    <key>ACC_AGENT_TOKEN</key><string>${TOKEN}</string>
+    <!-- The token is deliberately NOT embedded here. A launchd plist is world-readable,
+         so the secret would be exposed to any local user. The agent reads the token from
+         the file below, which is mode 600. -->
+    <key>ACC_AGENT_TOKEN_FILE</key><string>${TOKEN_FILE}</string>
     <key>ACC_MACHINE_NAME</key><string>${HOSTNAME_SHORT}</string>
   </dict>
   <key>RunAtLoad</key><true/>
