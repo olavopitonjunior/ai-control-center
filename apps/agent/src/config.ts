@@ -1,5 +1,57 @@
 import os from "node:os";
 import fs from "node:fs";
+import path from "node:path";
+
+/** Filename the install scripts write the pairing token to. */
+export const TOKEN_FILENAME = ".agent-pairing-token";
+
+/**
+ * Resolve the bearer token, in priority order:
+ *   1. ACC_AGENT_TOKEN            (explicit, highest precedence)
+ *   2. ACC_AGENT_TOKEN_FILE       (explicit path)
+ *   3. `.agent-pairing-token` found in the cwd or a parent directory
+ *
+ * The file fallback exists so autostart (Windows Task Scheduler / launchd) never has to
+ * embed the secret in a task definition or plist, which would otherwise sit in
+ * world-readable XML. Whitespace is trimmed — a stray newline would silently break auth.
+ */
+export function resolveToken(
+  env: NodeJS.ProcessEnv = process.env,
+  startDir: string = process.cwd(),
+  readFile: (p: string) => string = (p) => fs.readFileSync(p, "utf8"),
+  exists: (p: string) => boolean = (p) => fs.existsSync(p),
+): string | null {
+  const inline = env.ACC_AGENT_TOKEN?.trim();
+  if (inline) return inline;
+
+  const explicit = env.ACC_AGENT_TOKEN_FILE?.trim();
+  if (explicit) {
+    try {
+      const v = readFile(explicit).trim();
+      return v || null;
+    } catch {
+      return null;
+    }
+  }
+
+  // Walk up from the working directory (agent runs from apps/agent under pnpm).
+  let dir = startDir;
+  for (let i = 0; i < 4; i++) {
+    const candidate = path.join(dir, TOKEN_FILENAME);
+    if (exists(candidate)) {
+      try {
+        const v = readFile(candidate).trim();
+        if (v) return v;
+      } catch {
+        /* unreadable — keep looking */
+      }
+    }
+    const parent = path.dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+  return null;
+}
 
 export const AGENT_VERSION = "0.1.0";
 
@@ -35,7 +87,7 @@ export function isLoopback(host: string): boolean {
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): AgentConfig {
   const host = env.ACC_AGENT_HOST?.trim() || "127.0.0.1";
   const port = Number(env.ACC_AGENT_PORT ?? 47600);
-  const token = env.ACC_AGENT_TOKEN?.trim() || null;
+  const token = resolveToken(env);
   const hostname = os.hostname();
 
   if (!isLoopback(host) && !token) {
