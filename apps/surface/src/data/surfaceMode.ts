@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { isTauri } from "../env";
 
 /**
@@ -90,6 +90,8 @@ export function useSurfaceMode(): [
   const [settings, setSettings] = useState<SurfaceModeSettings>(() =>
     loadSurfaceMode(),
   );
+  /** True once the OS autostart state has been read, so we don't echo it back as a change. */
+  const hydrated = useRef(false);
 
   useEffect(() => {
     try {
@@ -107,9 +109,33 @@ export function useSurfaceMode(): [
 
   useWakeLock(settings.enabled && settings.preventSleep);
 
-  // Register/unregister launch-at-login to match the toggle (native only).
+  // ADOPT the real OS autostart state on first mount. The OS registration is the source
+  // of truth; localStorage is only a cache. Without this, a stale cached `false` would
+  // silently unregister an autostart entry enabled elsewhere (or by a previous install).
   useEffect(() => {
-    if (!isTauri()) return;
+    if (!isTauri()) {
+      hydrated.current = true;
+      return;
+    }
+    void (async () => {
+      try {
+        const { isEnabled } = await import("@tauri-apps/plugin-autostart");
+        const actual = await isEnabled();
+        setSettings((s) =>
+          s.autostart === actual ? s : { ...s, autostart: actual },
+        );
+      } catch {
+        /* plugin unavailable - leave the cached value alone */
+      } finally {
+        hydrated.current = true;
+      }
+    })();
+  }, []);
+
+  // Push USER-initiated changes to the OS. Skipped until hydration completes, so the
+  // adopt step above can never be mistaken for a user action.
+  useEffect(() => {
+    if (!isTauri() || !hydrated.current) return;
     void (async () => {
       try {
         const { enable, disable, isEnabled } =
