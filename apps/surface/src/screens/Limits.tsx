@@ -1,4 +1,4 @@
-import { useApp } from "../state/AppState";
+import { useApp } from "../state/appContext";
 import { useSettings } from "../data/settings";
 import {
   Bar,

@@ -1,4 +1,4 @@
-import { useApp } from "../state/AppState";
+import { useApp } from "../state/appContext";
 import { fmtClock } from "../components/ui";
 import { EmptyState } from "../components/EmptyState";
 import type { AutomationSource, ScheduledTask } from "@acc/protocol";

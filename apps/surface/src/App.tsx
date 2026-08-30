@@ -2,7 +2,8 @@ import { useState } from "react";
 import { SECTIONS, type SectionId } from "./nav";
 import { Screen } from "./screens/Screens";
 import { RUNTIME_LABEL } from "./env";
-import { AppProvider, useApp } from "./state/AppState";
+import { AppProvider } from "./state/AppState";
+import { useApp } from "./state/appContext";
 import { fmtClock } from "./components/ui";
 
 const STATUS_LABEL: Record<string, string> = {

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { UsageGranularity, UsageReport } from "@acc/protocol";
-import { useApp } from "../state/AppState";
+import { useApp } from "../state/appContext";
 import { fetchUsage } from "../data/protocolClient";
 import { exportUsageCsv, exportUsageJson } from "../data/export";
 import { BarChart, Donut } from "../components/charts";

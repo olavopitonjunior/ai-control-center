@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { UsageReport } from "@acc/protocol";
-import { useApp } from "../state/AppState";
+import { useApp } from "../state/appContext";
 import { useSettings } from "../data/settings";
 import { fetchUsage } from "../data/protocolClient";
 import { Card, fmtCompact } from "../components/ui";

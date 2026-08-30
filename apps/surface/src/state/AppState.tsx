@@ -1,7 +1,5 @@
 import {
-  createContext,
   useCallback,
-  useContext,
   useEffect,
   useMemo,
   useRef,
@@ -9,6 +7,7 @@ import {
   type ReactNode,
 } from "react";
 import type { Snapshot, SystemMetric } from "@acc/protocol";
+import { AppCtx, type AppState } from "./appContext";
 import { getStore } from "../data/store";
 import { fetchSnapshot } from "../data/protocolClient";
 import { deriveConnection, type Connection } from "../data/connection";
@@ -24,29 +23,6 @@ const OFFLINE_AFTER_MS = 35000;
 
 // Guards against overlapping retention sweeps across component instances/effect re-runs.
 let retentionInFlight = false;
-
-interface AppState {
-  machines: MachineRecord[];
-  selected: MachineRecord | null;
-  select: (id: string) => void;
-  addMachine: (input: MachineInput) => Promise<void>;
-  updateMachine: (id: string, input: MachineInput) => Promise<void>;
-  removeMachine: (id: string) => Promise<void>;
-
-  snapshot: Snapshot | null;
-  connection: Connection;
-  lastError: string | null;
-  lastUpdated: string | null;
-  history: SystemMetric[];
-}
-
-const Ctx = createContext<AppState | null>(null);
-
-export function useApp(): AppState {
-  const ctx = useContext(Ctx);
-  if (!ctx) throw new Error("useApp must be used within AppProvider");
-  return ctx;
-}
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const [machines, setMachines] = useState<MachineRecord[]>([]);
@@ -234,5 +210,5 @@ export function AppProvider({ children }: { children: ReactNode }) {
     history,
   };
 
-  return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
+  return <AppCtx.Provider value={value}>{children}</AppCtx.Provider>;
 }

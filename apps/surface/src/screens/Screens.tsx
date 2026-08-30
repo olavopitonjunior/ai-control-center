@@ -1,6 +1,6 @@
 import type { SectionId } from "../nav";
 import { SECTIONS } from "../nav";
-import { useApp } from "../state/AppState";
+import { useApp } from "../state/appContext";
 import { EmptyState } from "../components/EmptyState";
 import { Overview } from "./Overview";
 import { Sessions } from "./Sessions";

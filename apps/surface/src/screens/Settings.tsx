@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { DiscoveredAgent } from "@acc/protocol";
-import { useApp } from "../state/AppState";
+import { useApp } from "../state/appContext";
 import { useSettings } from "../data/settings";
 import { useSurfaceMode } from "../data/surfaceMode";
 import { usePowerMode } from "../data/power";
