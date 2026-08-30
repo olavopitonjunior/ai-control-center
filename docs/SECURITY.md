@@ -23,8 +23,9 @@ where noted and are non-negotiable (master spec §26).
 - Underlying tools stay local too: Glances is launched bound to `127.0.0.1` (its own
   default is `0.0.0.0` — we override it), and it is **never exposed directly**; only the
   agent faces the LAN.
-- **Fail-closed:** `loadConfig()` throws if a non-loopback host is requested **without**
-  `ACC_AGENT_TOKEN`. It is impossible to start LAN-exposed without a token.
+- **Fail-closed:** `loadConfig()` throws if a non-loopback host is requested and no token
+  can be resolved (env var, token-file path, or a `.agent-pairing-token` found by walking
+  up from the working directory). It is impossible to start LAN-exposed without a token.
 - LAN access requires a **bearer pairing token** on `/v1/*`. Comparison is
   **constant-time** (`node:crypto.timingSafeEqual`) to avoid timing leaks. `/health` is
   public liveness only (no sensitive data).
@@ -87,5 +88,8 @@ It is `.gitignore`d, stored in the app's local data dir, and never synced to any
 - [x] Agent binds loopback by default; refuses non-loopback without a token.
 - [x] Constant-time bearer check on `/v1/*`.
 - [x] Logger redacts `authorization` / `cookie`.
-- [x] No secrets written to disk by the agent; token read from env only.
+- [x] The agent writes no secrets to disk. It only ever READS the token — from the
+      environment, or from a mode-600 file created by the install scripts.
+- [x] Autostart definitions (launchd plist, Windows Scheduled Task) contain a path to the
+      token file, never the token itself.
 - [x] Secrets/DB patterns in `.gitignore`.

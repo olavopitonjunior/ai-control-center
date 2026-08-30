@@ -92,8 +92,9 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AgentConfig {
 
   if (!isLoopback(host) && !token) {
     throw new Error(
-      "Refusing to bind to a non-loopback address without ACC_AGENT_TOKEN. " +
-        "Set a pairing token before enabling LAN access (see docs/SECURITY.md).",
+      `Refusing to bind to ${host} without a pairing token. Provide one via ` +
+        `ACC_AGENT_TOKEN, ACC_AGENT_TOKEN_FILE, or a ${TOKEN_FILENAME} file in this ` +
+        "directory or a parent (the install scripts create one). See docs/SECURITY.md.",
     );
   }
 
