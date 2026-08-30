@@ -86,12 +86,15 @@ function useWakeLock(active: boolean): void {
 export function useSurfaceMode(): [
   SurfaceModeSettings,
   (patch: Partial<SurfaceModeSettings>) => void,
+  /** Non-null when the last launch-at-login change failed to apply. */
+  string | null,
 ] {
   const [settings, setSettings] = useState<SurfaceModeSettings>(() =>
     loadSurfaceMode(),
   );
   /** True once the OS autostart state has been read, so we don't echo it back as a change. */
   const hydrated = useRef(false);
+  const [autostartError, setAutostartError] = useState<string | null>(null);
 
   useEffect(() => {
     try {
@@ -132,8 +135,13 @@ export function useSurfaceMode(): [
     })();
   }, []);
 
-  // Push USER-initiated changes to the OS. Skipped until hydration completes, so the
-  // adopt step above can never be mistaken for a user action.
+  // Push USER-initiated changes to the OS, then VERIFY. Skipped until hydration
+  // completes, so the adopt step above can never be mistaken for a user action.
+  //
+  // Verification matters: registering autostart can fail (missing capability, policy,
+  // locked registry). Previously the failure was only console.warn'd, so the switch
+  // showed "on" while nothing had been registered — the UI lied. Now the stored value is
+  // corrected to whatever the OS actually reports, and the error is surfaced.
   useEffect(() => {
     if (!isTauri() || !hydrated.current) return;
     void (async () => {
@@ -143,8 +151,25 @@ export function useSurfaceMode(): [
         const already = await isEnabled();
         if (settings.autostart && !already) await enable();
         if (!settings.autostart && already) await disable();
+
+        const actual = await isEnabled();
+        if (actual !== settings.autostart) {
+          setAutostartError(
+            `The system did not apply this change (still ${actual ? "enabled" : "disabled"}). ` +
+              "Autostart may be blocked by policy or another tool.",
+          );
+          setSettings((s) =>
+            s.autostart === actual ? s : { ...s, autostart: actual },
+          );
+        } else {
+          setAutostartError(null);
+        }
       } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
         console.warn("autostart unavailable", e);
+        setAutostartError(`Could not change launch-at-login: ${msg}`);
+        // Reflect reality rather than leaving the switch showing a state that never took.
+        setSettings((s) => ({ ...s, autostart: false }));
       }
     })();
   }, [settings.autostart]);
@@ -154,5 +179,5 @@ export function useSurfaceMode(): [
       setSettings((s) => ({ ...s, ...patch })),
     [],
   );
-  return [settings, update];
+  return [settings, update, autostartError];
 }

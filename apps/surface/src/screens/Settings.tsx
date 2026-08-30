@@ -14,7 +14,7 @@ export function Settings() {
   const { machines, selected, addMachine, updateMachine, removeMachine } =
     useApp();
   const [settings, updateSettings] = useSettings();
-  const [surfaceMode, updateSurfaceMode] = useSurfaceMode();
+  const [surfaceMode, updateSurfaceMode, autostartError] = useSurfaceMode();
   const {
     setting: powerSetting,
     setSetting: setPowerSetting,
@@ -353,6 +353,12 @@ export function Settings() {
           />
           <span>Launch at login</span>
         </label>
+        {autostartError && <p className="form__err">{autostartError}</p>}
+        {surfaceMode.autostart && !autostartError && (
+          <span className="field__hint field__hint--ok">
+            Registered with Windows — the app will open at sign-in.
+          </span>
+        )}
       </Card>
 
       <Card title="Power &amp; battery">
