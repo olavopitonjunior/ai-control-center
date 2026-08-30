@@ -43,7 +43,11 @@ fi
 PNPM_BIN="$(command -v pnpm)"
 NODE_DIR="$(dirname "$(command -v node)")"
 IP="$(ipconfig getifaddr en0 2>/dev/null || ipconfig getifaddr en1 2>/dev/null || echo 'your-ip')"
-HOSTNAME_SHORT="$(scutil --get LocalHostName 2>/dev/null || hostname)"
+HOSTNAME_SHORT="$(scutil --get LocalHostName 2>/dev/null || hostname -s)"
+# Bonjour name, resolvable over mDNS as <name>.local. Preferred over the IP because a
+# laptop's DHCP lease changes when it reconnects (macOS also bumps the name to -2, -3...
+# on rejoin), which silently breaks a pinned IP.
+MDNS_NAME="${HOSTNAME_SHORT}.local"
 
 mkdir -p "$HOME/Library/LaunchAgents"
 cat > "$PLIST" <<PLISTEOF
@@ -83,10 +87,14 @@ launchctl load "$PLIST"
 echo "  [ok]   loaded launchd agent '${LABEL}' (starts now + at login)"
 
 echo ""
-echo "On the Surface, add this machine:"
+echo "On the Surface, open Settings -> Add a machine and enter:"
 echo "  Name:    ${HOSTNAME_SHORT}"
-echo "  Address: ${IP}:${PORT}"
+echo "  Address: ${MDNS_NAME}:${PORT}     <- recommended (follows DHCP changes)"
 echo "  Token:   (contents of ${TOKEN_FILE})"
+echo ""
+echo "  Current IP is ${IP}:${PORT}, but a laptop's DHCP lease changes when it"
+echo "  reconnects, which would break a pinned IP. Use the .local name unless your"
+echo "  router gives this Mac a fixed reservation."
 echo ""
 echo "Logs: ~/Library/Logs/ai-control-center-agent.log"
 echo "Uninstall: scripts/uninstall-agent-macos.sh"

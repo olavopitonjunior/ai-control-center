@@ -118,6 +118,10 @@ Write-Host ("  Name:    {0}" -f $hostname)
 Write-Host ("  Address: {0}:{1}" -f $ips[0], $Port)
 Write-Host ("  Token:   (contents of {0})" -f $tokenFile)
 if ($allIps.Count -gt 1) { Write-Host ("  (all detected addresses: {0})" -f $ipText) }
+Write-Host ""
+Write-Host ("  If this machine's IP changes, try the name form instead: {0}:{1}" -f "$hostname.local", $Port)
+Write-Host "  (Windows resolves .local over mDNS on recent builds; if it fails, pin the IP"
+Write-Host "   with a DHCP reservation in your router. A wired desktop rarely changes IP.)"
 
 Write-Host ""
 Write-Host "Start the agent LAN-exposed (trusted private network only):" -ForegroundColor Cyan

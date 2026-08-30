@@ -139,6 +139,9 @@ Manual checks worth doing once (spec §61):
 | Symptom | Cause / fix |
 |---|---|
 | Surface can't reach the agent | Wrong address (use the **private** `192.168.x` / `10.x` one, not a VPN address); firewall not opened; agent bound to loopback (`ACC_AGENT_HOST` must be `0.0.0.0`). |
+| Machine was ONLINE, now OFFLINE, and **ping works but the port times out** | The agent's **IP changed** (DHCP lease renewed on reconnect). Confirm with `ipconfig getifaddr en0` on the Mac, or resolve `<name>.local` from the Surface. Prefer the `.local` address when pairing, or set a DHCP reservation. Ping can still "succeed" against a stale address if another device took it. |
+| macOS Bonjour name keeps changing (`-2`, `-3`) | macOS bumps the name when it thinks the old one is taken, which happens on repeated rejoins. Use the **current** `scutil --get LocalHostName` value; the installer prints it. |
+| Laptop shows OFFLINE overnight | It slept. A sleeping Mac may still answer ICMP via a Bonjour sleep proxy while serving no TCP. Enable *Prevent automatic sleeping when the display is off* while plugged in. |
 | `401 unauthorized` | Token mismatch — re-copy `.agent-pairing-token`. |
 | System says *Not available* | Glances isn't running on that machine. Everything else still works by design. |
 | Sessions/Usage empty | ccusage found no local coding-agent logs on that machine. |
