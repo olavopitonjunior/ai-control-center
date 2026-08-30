@@ -1,8 +1,7 @@
 import {
   activeBlockLimit,
-  normalizeCcusageCost,
+  ccusageForAgentOnDay,
   normalizeCcusageSessions,
-  ccusageTokensForAgent,
   type CcusageBlocksReport,
   type CcusageDailyReport,
   type CcusageSessionReport,
@@ -65,7 +64,11 @@ export async function collectCcusage(
     ]);
 
     const limit = activeBlockLimit(blocks, nowMs);
-    const claudeTokens = ccusageTokensForAgent(daily, "claude");
+    // TODAY in the AGENT's local timezone — ccusage buckets days locally, and the UI
+    // labels this card "Today". Using the lifetime totals here would report years of
+    // usage as though it were a single day.
+    const today = localDayString(new Date(nowMs));
+    const todayUsage = ccusageForAgentOnDay(daily, "claude", today);
     const provider: ProviderUsage = {
       provider: "Claude",
       account: null,
@@ -73,8 +76,13 @@ export async function collectCcusage(
       updatedAt: nowIso,
       limits: limit ? [limit] : [],
       credits: null,
-      cost: normalizeCcusageCost(daily),
-      tokens: claudeTokens,
+      cost: {
+        amount: todayUsage.cost,
+        currency: "USD",
+        source: "ccusage",
+        sourceQuality: "CALCULATED",
+      },
+      tokens: todayUsage.tokens,
       status: null,
     };
 
@@ -105,6 +113,12 @@ export async function collectCcusage(
       lastError: message,
     };
   }
+}
+
+/** Local calendar date as YYYY-MM-DD (ccusage buckets days in local time, not UTC). */
+export function localDayString(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
 export function defaultCcusageOptions(machineId: string): CcusageOptions {

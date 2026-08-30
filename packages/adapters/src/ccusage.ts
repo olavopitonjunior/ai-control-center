@@ -225,9 +225,56 @@ export function normalizeCcusageCost(report: CcusageDailyReport): Cost {
 }
 
 /**
+ * Tokens AND cost for one agent on ONE calendar day.
+ *
+ * `ccusage daily --json` returns every day it knows about, so summing `totals` gives a
+ * LIFETIME figure. The Overview card is labelled "Today", so it must be fed this instead;
+ * otherwise a long-lived machine shows years of usage under a "Today" heading (observed
+ * on a real Mac: $5,554 and 6.0B tokens presented as today's usage).
+ *
+ * @param day local calendar date as `YYYY-MM-DD` (ccusage's `period` format)
+ */
+export function ccusageForAgentOnDay(
+  report: CcusageDailyReport,
+  agent: string,
+  day: string,
+): { tokens: TokenUsage; cost: number | null } {
+  const rows = report.daily.filter(
+    (r) => r.period === day && (r.metadata?.agents?.includes(agent) ?? false),
+  );
+  if (rows.length === 0) {
+    return {
+      tokens: {
+        inputTokens: null,
+        outputTokens: null,
+        cacheReadTokens: null,
+        cacheCreationTokens: null,
+        totalTokens: null,
+      },
+      cost: null,
+    };
+  }
+  const sum = (pick: (r: CcusageDayRow) => number) =>
+    rows.reduce((acc, r) => acc + (pick(r) || 0), 0);
+  return {
+    tokens: {
+      inputTokens: sum((r) => r.inputTokens),
+      outputTokens: sum((r) => r.outputTokens),
+      cacheReadTokens: sum((r) => r.cacheReadTokens),
+      cacheCreationTokens: sum((r) => r.cacheCreationTokens),
+      totalTokens: sum((r) => r.totalTokens),
+    },
+    cost: sum((r) => r.totalCost),
+  };
+}
+
+/**
  * Sum token usage for a single agent (e.g. "claude") across all day rows. ccusage
  * tags each row's agent(s) in `metadata.agents`. Returns null token fields when
  * the agent produced no matching rows (honest absence, not zero-as-data).
+ *
+ * NOTE: this is a LIFETIME total. For anything labelled "today" use
+ * {@link ccusageForAgentOnDay}.
  */
 export function ccusageTokensForAgent(
   report: CcusageDailyReport,

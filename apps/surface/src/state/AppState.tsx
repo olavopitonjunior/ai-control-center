@@ -30,6 +30,7 @@ interface AppState {
   selected: MachineRecord | null;
   select: (id: string) => void;
   addMachine: (input: MachineInput) => Promise<void>;
+  updateMachine: (id: string, input: MachineInput) => Promise<void>;
   removeMachine: (id: string) => Promise<void>;
 
   snapshot: Snapshot | null;
@@ -115,6 +116,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const rec = await store.addMachine(input);
       await reload();
       setSelectedId(rec.id);
+    },
+    [reload],
+  );
+
+  const updateMachine = useCallback(
+    async (id: string, input: MachineInput) => {
+      const store = await getStore();
+      await store.updateMachine(id, input);
+      await reload();
+      // Reset live state so the next poll re-evaluates with the new address/token.
+      lastSuccessRef.current = 0;
+      setConnection("PAIRING");
+      setSnapshot(null);
+      setLastError(null);
     },
     [reload],
   );
@@ -210,6 +225,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     selected,
     select: setSelectedId,
     addMachine,
+    updateMachine,
     removeMachine,
     snapshot,
     connection,

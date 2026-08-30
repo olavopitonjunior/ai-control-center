@@ -452,3 +452,10 @@ body.surface-mode .stat__value { font-size: 26px; }
 /* session filters */
 .filters { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
 .filter__select { min-width: 150px; }
+
+/* inline field validation + machine row actions */
+.field__hint { font-size: 12px; line-height: 1.4; margin-top: 2px; }
+.field__hint--error { color: var(--crit); }
+.field__hint--warning { color: var(--warn); }
+.field__hint--ok { color: var(--ok); }
+.machine-list__actions { display: flex; gap: 8px; flex: 0 0 auto; }

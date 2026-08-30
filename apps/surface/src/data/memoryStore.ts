@@ -40,6 +40,13 @@ export class MemoryStore implements Store {
     return record;
   }
 
+  async updateMachine(id: string, input: MachineInput): Promise<void> {
+    this.machines = this.machines.map((m) =>
+      m.id === id ? { ...m, ...input } : m,
+    );
+    this.persist();
+  }
+
   async removeMachine(id: string): Promise<void> {
     this.machines = this.machines.filter((m) => m.id !== id);
     this.metrics.delete(id);

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   activeBlockLimit,
   activeBlockTokens,
+  ccusageForAgentOnDay,
   ccusageTokensForAgent,
   mapAgentKind,
   normalizeCcusageCost,
@@ -79,6 +80,32 @@ describe("ccusage normalizer", () => {
     const claude = ccusageTokensForAgent(CCUSAGE, "claude");
     expect(claude.totalTokens).toBe(836303);
     expect(claude.cacheReadTokens).toBe(719110);
+  });
+
+  // Regression: the Overview card is labelled "Today" but was fed lifetime totals.
+  // On a real Mac that rendered $5,554 and 6.0B tokens as "today's" usage.
+  it("ccusageForAgentOnDay returns ONE day, not the lifetime total", () => {
+    const today = ccusageForAgentOnDay(CCUSAGE, "claude", "2026-08-28");
+    expect(today.tokens.totalTokens).toBe(836303);
+    expect(today.cost).toBeCloseTo(1.73601);
+    // The lifetime helper sums every day and must stay larger than a single day.
+    expect(normalizeCcusageTotals(CCUSAGE).totalTokens).toBe(837057);
+  });
+
+  it("ccusageForAgentOnDay reports null (not zero) for a day with no usage", () => {
+    const none = ccusageForAgentOnDay(CCUSAGE, "claude", "2026-01-01");
+    expect(none.tokens.totalTokens).toBeNull();
+    expect(none.cost).toBeNull();
+  });
+
+  it("does not attribute another agent's usage to the requested day", () => {
+    // 2026-06-11 belongs to codex, not claude.
+    expect(
+      ccusageForAgentOnDay(CCUSAGE, "claude", "2026-06-11").cost,
+    ).toBeNull();
+    expect(
+      ccusageForAgentOnDay(CCUSAGE, "codex", "2026-06-11").cost,
+    ).toBeCloseTo(0.0032);
   });
 
   it("returns nulls (not zeros) for an agent with no data", () => {

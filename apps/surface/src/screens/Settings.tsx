@@ -4,12 +4,15 @@ import { useApp } from "../state/AppState";
 import { useSettings } from "../data/settings";
 import { useSurfaceMode } from "../data/surfaceMode";
 import { usePowerMode } from "../data/power";
-import { fetchDiscover } from "../data/protocolClient";
+import { fetchDiscover, testConnection } from "../data/protocolClient";
 import { getStore } from "../data/store";
+import { validateAddress, validateToken } from "../data/validation";
+import type { MachineRecord } from "../data/types";
 import { Card } from "../components/ui";
 
 export function Settings() {
-  const { machines, selected, addMachine, removeMachine } = useApp();
+  const { machines, selected, addMachine, updateMachine, removeMachine } =
+    useApp();
   const [settings, updateSettings] = useSettings();
   const [surfaceMode, updateSurfaceMode] = useSurfaceMode();
   const {
@@ -94,6 +97,58 @@ export function Settings() {
   const [token, setToken] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  /** Machine id being edited, or null when the form is in "add" mode. */
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [testing, setTesting] = useState(false);
+  const [testMsg, setTestMsg] = useState<{ ok: boolean; text: string } | null>(
+    null,
+  );
+
+  const addrIssue = validateAddress(address);
+  const tokenIssue = validateToken(token);
+  const blocking =
+    addrIssue?.level === "error" || tokenIssue?.level === "error";
+
+  function resetForm() {
+    setEditingId(null);
+    setName("");
+    setAddress("");
+    setToken("");
+    setErr(null);
+    setTestMsg(null);
+  }
+
+  function startEdit(m: MachineRecord) {
+    setEditingId(m.id);
+    setName(m.displayName);
+    setAddress(m.address);
+    setToken(m.token ?? "");
+    setErr(null);
+    setTestMsg(null);
+  }
+
+  async function runTest() {
+    setTesting(true);
+    setTestMsg(null);
+    try {
+      const result = await testConnection({
+        id: editingId ?? "probe",
+        displayName: displayName.trim() || "probe",
+        address: address.trim(),
+        token: token.trim() || null,
+      });
+      setTestMsg(
+        result.ok
+          ? {
+              ok: true,
+              text: `Connected: ${result.hostname} (${result.os}), agent ${result.agentVersion}.`,
+            }
+          : { ok: false, text: result.detail },
+      );
+    } finally {
+      setTesting(false);
+    }
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -102,16 +157,20 @@ export function Settings() {
       setErr("Name and address are required.");
       return;
     }
+    if (blocking) {
+      setErr("Fix the highlighted problems first.");
+      return;
+    }
     setBusy(true);
     try {
-      await addMachine({
+      const input = {
         displayName: displayName.trim(),
         address: address.trim(),
         token: token.trim() || null,
-      });
-      setName("");
-      setAddress("");
-      setToken("");
+      };
+      if (editingId) await updateMachine(editingId, input);
+      else await addMachine(input);
+      resetForm();
     } catch (e2) {
       setErr(e2 instanceof Error ? e2.message : String(e2));
     } finally {
@@ -129,7 +188,7 @@ export function Settings() {
 
   return (
     <div className="grid">
-      <Card title="Add a machine">
+      <Card title={editingId ? "Edit machine" : "Add a machine"}>
         <form className="form" onSubmit={submit}>
           <label className="field">
             <span>Name</span>
@@ -144,30 +203,75 @@ export function Settings() {
             <input
               value={address}
               onChange={(e) => setAddress(e.target.value)}
-              placeholder="192.168.0.20:47600"
+              placeholder="my-machine.local:47600"
             />
+            {addrIssue && (
+              <span className={`field__hint field__hint--${addrIssue.level}`}>
+                {addrIssue.message}
+              </span>
+            )}
           </label>
           <label className="field">
-            <span>Pairing token (optional for a local agent)</span>
+            <span>Pairing token (leave blank for a local agent)</span>
             <input
               value={token}
               onChange={(e) => setToken(e.target.value)}
-              placeholder="paste token"
-              type="password"
+              placeholder="paste the 43-character token"
+              type="text"
+              spellCheck={false}
+              autoComplete="off"
             />
+            {tokenIssue ? (
+              <span className={`field__hint field__hint--${tokenIssue.level}`}>
+                {tokenIssue.message}
+              </span>
+            ) : (
+              token.trim() !== "" && (
+                <span className="field__hint field__hint--ok">
+                  Looks like a valid token ({token.trim().length} characters).
+                </span>
+              )
+            )}
           </label>
           {err && <p className="form__err">{err}</p>}
+          {testMsg && (
+            <p
+              className={
+                testMsg.ok ? "field__hint field__hint--ok" : "form__err"
+              }
+            >
+              {testMsg.text}
+            </p>
+          )}
           <div className="form__actions">
-            <button type="submit" className="btn btn--primary" disabled={busy}>
-              {busy ? "Adding…" : "Add machine"}
+            <button
+              type="submit"
+              className="btn btn--primary"
+              disabled={busy || blocking}
+            >
+              {busy ? "Saving…" : editingId ? "Save changes" : "Add machine"}
             </button>
             <button
               type="button"
               className="btn"
-              onClick={() => void addLocalhost()}
+              onClick={() => void runTest()}
+              disabled={testing || !address.trim()}
             >
-              Add this PC (127.0.0.1:47600)
+              {testing ? "Testing…" : "Test connection"}
             </button>
+            {editingId ? (
+              <button type="button" className="btn" onClick={resetForm}>
+                Cancel
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="btn"
+                onClick={() => void addLocalhost()}
+              >
+                Add this PC (127.0.0.1:47600)
+              </button>
+            )}
           </div>
         </form>
       </Card>
@@ -336,12 +440,17 @@ export function Settings() {
                     {m.address} {m.token ? "· token set" : "· no token"}
                   </div>
                 </div>
-                <button
-                  className="btn btn--danger"
-                  onClick={() => void removeMachine(m.id)}
-                >
-                  Remove
-                </button>
+                <div className="machine-list__actions">
+                  <button className="btn" onClick={() => startEdit(m)}>
+                    Edit
+                  </button>
+                  <button
+                    className="btn btn--danger"
+                    onClick={() => void removeMachine(m.id)}
+                  >
+                    Remove
+                  </button>
+                </div>
               </li>
             ))}
           </ul>

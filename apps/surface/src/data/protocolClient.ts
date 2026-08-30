@@ -87,6 +87,54 @@ export async function fetchUsage(
   return UsageReportSchema.parse(data.report);
 }
 
+export type ConnectionTest =
+  | { ok: true; hostname: string; os: string; agentVersion: string }
+  | {
+      ok: false;
+      reason: "unreachable" | "unauthorized" | "error";
+      detail: string;
+    };
+
+/**
+ * Diagnose a machine's connection precisely. A bare OFFLINE badge cannot distinguish
+ * "the host is unreachable" from "the token is wrong", which is the single most common
+ * pairing mistake — so probe the PUBLIC /health first, then an authenticated endpoint.
+ */
+export async function testConnection(
+  machine: MachineRecord,
+): Promise<ConnectionTest> {
+  let health: HealthResponse;
+  try {
+    health = await fetchHealth(machine, 8000);
+  } catch (e) {
+    return {
+      ok: false,
+      reason: "unreachable",
+      detail: `Could not reach ${baseUrl(machine.address)} — check the address, that the agent is running, and that it is not asleep or firewalled. (${e instanceof Error ? e.message : String(e)})`,
+    };
+  }
+  try {
+    await fetchSnapshot(machine, 25000);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (/unauthor/i.test(msg)) {
+      return {
+        ok: false,
+        reason: "unauthorized",
+        detail:
+          "The machine is reachable but rejected the pairing token (401). Re-copy the token from the monitored machine — a missing character is enough to fail.",
+      };
+    }
+    return { ok: false, reason: "error", detail: msg };
+  }
+  return {
+    ok: true,
+    hostname: health.hostname,
+    os: health.os,
+    agentVersion: health.agentVersion,
+  };
+}
+
 /**
  * Ask a reachable agent to browse the LAN (mDNS) for other agents. Returns discovered
  * peers (never their tokens) for one-click registration on the Surface.

@@ -65,6 +65,15 @@ export class SqliteStore implements Store {
     return { id, ...input };
   }
 
+  async updateMachine(id: string, input: MachineInput): Promise<void> {
+    await this.conn.execute(
+      "UPDATE machines SET display_name = $1, address = $2, token = $3 WHERE id = $4",
+      [input.displayName, input.address, input.token, id],
+    );
+    // Force the next ingest to re-write provider/automation rows for this machine.
+    this.lastHashes.delete(id);
+  }
+
   async removeMachine(id: string): Promise<void> {
     await this.conn.execute("DELETE FROM machines WHERE id = $1", [id]);
     await this.conn.execute(

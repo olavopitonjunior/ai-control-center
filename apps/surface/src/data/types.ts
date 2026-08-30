@@ -29,6 +29,8 @@ export interface Store {
   init(): Promise<void>;
   listMachines(): Promise<MachineRecord[]>;
   addMachine(input: MachineInput): Promise<MachineRecord>;
+  /** Update a registered machine's name/address/token in place (spec: editable pairing). */
+  updateMachine(id: string, input: MachineInput): Promise<void>;
   removeMachine(id: string): Promise<void>;
   recordSystemMetric(machineId: string, metric: SystemMetric): Promise<void>;
   /**
