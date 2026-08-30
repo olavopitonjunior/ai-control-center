@@ -61,7 +61,10 @@ export async function fetchHealth(
  */
 export async function fetchSnapshot(
   machine: MachineRecord,
-  timeoutMs = 8000,
+  // A cold snapshot spawns ccusage and queries Glances/schedulers; measured at ~4s on a
+  // quiet machine and longer on one with many sessions or a laggy Wi-Fi link. 8s was too
+  // tight and made a healthy agent look OFFLINE, so allow generous headroom.
+  timeoutMs = 25000,
 ): Promise<Snapshot> {
   const data = await getJson(
     `${baseUrl(machine.address)}/v1/snapshot`,

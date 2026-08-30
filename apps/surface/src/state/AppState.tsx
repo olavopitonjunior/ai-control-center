@@ -17,7 +17,10 @@ import type { MachineInput, MachineRecord } from "../data/types";
 
 export type { Connection };
 
-const OFFLINE_AFTER_MS = 15000; // no successful poll within this -> OFFLINE
+// No successful poll within this window -> OFFLINE. Must exceed the snapshot request
+// timeout (25s), otherwise a single slow-but-healthy agent would be declared OFFLINE
+// while its request is still in flight.
+const OFFLINE_AFTER_MS = 35000;
 
 // Guards against overlapping retention sweeps across component instances/effect re-runs.
 let retentionInFlight = false;
@@ -140,8 +143,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!selected) return;
     let cancelled = false;
+    // A snapshot can take several seconds (cold ccusage). Without this guard, polls
+    // overlap and queue up against a slow agent, compounding the delay.
+    let inFlight = false;
 
     async function poll(machine: MachineRecord) {
+      if (inFlight) return;
+      inFlight = true;
       try {
         const snap = await fetchSnapshot(machine);
         if (cancelled) return;
@@ -184,6 +192,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
             previous: prev,
           }),
         );
+      } finally {
+        inFlight = false;
       }
     }
 
